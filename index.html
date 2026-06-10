@@ -3,297 +3,218 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Game Prasekolah - 3D Object</title>
+<title>Game Prasekolah - 3D Interactable</title>
 <style>
-    body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background: #dff5d8;
-        overflow: hidden;
-    }
-
-    #playground {
-        width: 100vw;
-        height: 100vh;
-        position: relative;
-        perspective: 1000px; /* Adds depth for 3D rotation */
-    }
-
-    .controls {
-        position: absolute;
-        top: 15%;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 100;
-    }
-
-    button {
-        font-size: 30px;
-        padding: 10px 20px;
-        margin: 0 10px;
-        cursor: pointer;
-        background: white;
-        border: 2px solid #888;
-        border-radius: 10px;
-        box-shadow: 0 4px 0 #666;
-    }
-
-    button:active {
-        transform: translateY(4px);
-        box-shadow: none;
-    }
-
-    /* --- 3D OBJECT STYLES --- */
-    #object-container {
-        position: absolute;
-        top: 35%;
-        left: 50%;
-        width: 120px;
-        height: 160px;
-        transform-style: preserve-3d; /* Crucial for 3D spinning */
-        cursor: grab;
-    }
-
-    #object-container:active {
-        cursor: grabbing;
-    }
-
-    /* The main body of the bin */
-    .bin-body {
-        position: absolute;
-        bottom: 0;
-        width: 100px;
-        height: 120px;
-        left: 10px;
-        background: linear-gradient(to right, #999 0%, #eee 30%, #ccc 70%, #777 100%);
-        border-radius: 10px 10px 20px 20px;
-        box-shadow: inset -5px 0 10px rgba(0,0,0,0.2), 0 10px 20px rgba(0,0,0,0.3);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        overflow: hidden;
-    }
-
-    /* Vertical ridges on the bin */
-    .ridges {
-        display: flex;
-        gap: 8px;
-        opacity: 0.4;
-    }
-    .ridge {
-        width: 6px;
-        height: 90%;
-        background: #555;
-        border-radius: 4px;
-        box-shadow: 1px 0 0 rgba(255,255,255,0.5);
-    }
-
-    /* The Lid */
-    .bin-lid {
-        position: absolute;
-        top: 25px;
-        left: 5px;
-        width: 110px;
-        height: 25px;
-        background: linear-gradient(to bottom, #ddd, #aaa);
-        border-radius: 15px;
-        box-shadow: 0 5px 5px rgba(0,0,0,0.2);
-        z-index: 2;
-    }
-
-    /* The Handle */
-    .bin-handle {
-        position: absolute;
-        top: 10px;
-        left: 35px;
-        width: 50px;
-        height: 20px;
-        border: 8px solid #bbb;
-        border-bottom: none;
-        border-radius: 20px 20px 0 0;
-        z-index: 1;
-    }
-
-    /* --- DESTINATIONS & UI --- */
-    .destinations {
-        position: absolute;
-        bottom: 100px;
-        width: 100%;
-        display: flex;
-        justify-content: center;
-        gap: 30px;
-    }
-
-    .dropzone {
-        width: 150px;
-        height: 150px;
-        background: white;
-        border: 4px dashed #888;
-        border-radius: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-        font-size: 22px;
-        transition: transform 0.2s;
-    }
+    body { margin: 0; font-family: Arial, sans-serif; background: #dff5d8; overflow: hidden; }
     
-    .dropzone:hover {
-        transform: scale(1.05);
-        background: #f0fff0;
-    }
+    #playground { width: 100vw; height: 100vh; position: relative; }
 
-    .teacher {
+    /* 3D Model Container */
+    #model-container {
         position: absolute;
-        bottom: 10px;
-        left: 50%;
+        top: 25%; left: 50%;
+        width: 300px; height: 400px;
         transform: translateX(-50%);
-        font-size: 80px;
+        z-index: 10;
+        transition: transform 0.1s ease-out; /* Smooth movement when dragging */
     }
 
-    #popup {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,.7);
-        color: white;
-        z-index: 999;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        flex-direction: column;
-    }
+    iframe { width: 100%; height: 100%; border: none; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
 
-    #popup h1 { font-size: 50px; margin-bottom: 10px; }
-    #popup p { font-size: 28px; max-width: 700px; padding: 0 20px; }
+    .controls { position: absolute; top: 5%; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; gap: 10px; }
+    button { font-size: 20px; padding: 8px 16px; cursor: pointer; background: white; border: 2px solid #888; border-radius: 8px; }
+
+    .destinations { position: absolute; bottom: 80px; width: 100%; display: flex; justify-content: center; gap: 20px; }
+    .dropzone { 
+        width: 140px; height: 140px; background: white; border: 4px dashed #888; 
+        border-radius: 20px; display: flex; align-items: center; justify-content: center; 
+        flex-direction: column; font-size: 18px; transition: all 0.3s;
+    }
+    .dropzone.highlight { background: #e0ffe0; border-color: #4caf50; transform: scale(1.1); }
+
+    .teacher { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 70px; pointer-events: none; }
+
+    #popup { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.8); color: white; z-index: 999; justify-content: center; align-items: center; text-align: center; flex-direction: column; }
+    #popup h1 { font-size: 40px; } #popup p { font-size: 24px; max-width: 600px; padding: 0 20px; }
 </style>
 </head>
 <body>
 
 <div id="playground">
-
     <div class="controls">
-        <button onclick="rotateLeft()">↺ Putar Kiri</button>
-        <button onclick="rotateRight()">Putar Kanan ↻</button>
+        <button onclick="resetPosition()">🔄 Reset Posisi</button>
     </div>
 
-    <!-- 3D OBJECT CONTAINER -->
-    <div id="object-container" draggable="true">
-        <div class="bin-handle"></div>
-        <div class="bin-lid"></div>
-        <div class="bin-body">
-            <div class="ridges">
-                <div class="ridge"></div>
-                <div class="ridge"></div>
-                <div class="ridge"></div>
-                <div class="ridge"></div>
-                <div class="ridge"></div>
-            </div>
-        </div>
+    <!-- SKETCHFAB 3D MODEL -->
+    <div id="model-container">
+        <iframe id="sketchfab-frame" 
+            src="https://sketchfab.com/models/731efe2635c9472c9c1e4fdb1f8fbd13/embed?autostart=1&ui_infos=0&ui_watermark_link=0&ui_watermark=0&ui_ar=0&ui_vr=0&ui_help=0&ui_settings=0&ui_annotations=0&ui_inspector=0" 
+            allow="autoplay; fullscreen; xr-spatial-tracking" 
+            xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share>
+        </iframe>
     </div>
 
     <div class="destinations">
-        <div class="dropzone" data-id="tong">
-            <span style="font-size: 40px;">🗑️</span>
-            <div>Tong Sampah</div>
-        </div>
-        <div class="dropzone" data-id="meja">
-            <span style="font-size: 40px;">🪑</span>
-            <div>Meja</div>
-        </div>
-        <div class="dropzone" data-id="beg">
-            <span style="font-size: 40px;">🎒</span>
-            <div>Beg</div>
-        </div>
-        <div class="dropzone" data-id="mulut">
-            <span style="font-size: 40px;">👄</span>
-            <div>Mulut</div>
-        </div>
+        <div class="dropzone" data-id="tong"><span style="font-size:30px">🗑️</span><div>Tong Kitar Semula</div></div>
+        <div class="dropzone" data-id="meja"><span style="font-size:30px">🪑</span><div>Meja</div></div>
+        <div class="dropzone" data-id="beg"><span style="font-size:30px">🎒</span><div>Beg</div></div>
+        <div class="dropzone" data-id="mulut"><span style="font-size:30px"></span><div>Mulut</div></div>
     </div>
 
     <div class="teacher">👩‍🏫</div>
-
 </div>
 
 <div id="popup">
     <h1 id="title"></h1>
     <p id="message"></p>
-    <div id="teacherReaction" style="font-size:120px; margin-top: 20px;"></div>
+    <div id="teacherReaction" style="font-size:100px; margin-top:20px;"></div>
 </div>
 
-<!-- Placeholder Audio Files -->
 <audio id="successSound" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg"></audio>
 <audio id="wrongSound" src="https://actions.google.com/sounds/v1/cartoon/clown_horn.ogg"></audio>
 <audio id="clapSound" src="https://actions.google.com/sounds/v1/crowds/battle_crowd_celebrate_stutter.ogg"></audio>
 
+<!-- Sketchfab Viewer API -->
+<script src="https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js"></script>
+
 <script>
-// Game Logic
-const scenario = {
-    correct: "tong",
-    message: "Bagus! Sampah perlu dibuang ke dalam tong sampah."
-};
+let api = null;
+let isDragging = false;
+let startX, startY, initialLeft, initialTop;
+const modelContainer = document.getElementById('model-container');
+const correctTarget = 'tong';
 
-let rotation = 0;
-const objectContainer = document.getElementById('object-container');
+// Initialize Sketchfab API
+const iframe = document.getElementById('sketchfab-frame');
+api = new SketchfabViewerAPI(iframe);
 
-function rotateLeft() {
-    rotation -= 45;
-    updateRotation();
-}
-
-function rotateRight() {
-    rotation += 45;
-    updateRotation();
-}
-
-function updateRotation() {
-    // Apply 3D rotation
-    objectContainer.style.transform = `translate(-50%, -50%) rotateY(${rotation}deg)`;
-}
-
-// Drag and Drop Logic
-objectContainer.addEventListener('dragstart', e => {
-    e.dataTransfer.setData('text', 'drag');
+api.init({
+    success: function() {
+        console.log('3D Model Loaded');
+        // Disable default camera controls when we start dragging
+        api.addEventListener('mousedown', () => {
+            if(isDragging) api.stopCameraControl();
+        });
+    },
+    error: function(err) { console.error('Error loading model:', err); }
 });
 
-document.querySelectorAll('.dropzone').forEach(zone => {
-    zone.addEventListener('dragover', e => {
-        e.preventDefault();
-    });
+// --- DRAG LOGIC FOR 3D MODEL ---
+modelContainer.addEventListener('mousedown', startDrag);
+modelContainer.addEventListener('touchstart', startDrag, {passive: false});
 
-    zone.addEventListener('drop', e => {
-        e.preventDefault();
+function startDrag(e) {
+    // Prevent interaction with 3D orbit controls during drag
+    e.preventDefault(); 
+    isDragging = true;
+    
+    const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+    
+    startX = clientX;
+    startY = clientY;
+    
+    const rect = modelContainer.getBoundingClientRect();
+    // Store current position relative to viewport
+    initialLeft = rect.left;
+    initialTop = rect.top;
+    
+    // Fix position absolutely during drag so it doesn't jump
+    modelContainer.style.position = 'fixed';
+    modelContainer.style.left = initialLeft + 'px';
+    modelContainer.style.top = initialTop + 'px';
+    modelContainer.style.transform = 'none';
+    modelContainer.style.zIndex = 1000;
+    
+    // Pause 3D interactions while dragging
+    if(api) api.pause();
+}
+
+window.addEventListener('mousemove', drag);
+window.addEventListener('touchmove', drag, {passive: false});
+
+function drag(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    
+    const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+    
+    const dx = clientX - startX;
+    const dy = clientY - startY;
+    
+    modelContainer.style.left = (initialLeft + dx) + 'px';
+    modelContainer.style.top = (initialTop + dy) + 'px';
+    
+    // Highlight dropzones when hovering
+    checkHover(clientX, clientY);
+}
+
+window.addEventListener('mouseup', endDrag);
+window.addEventListener('touchend', endDrag);
+
+function endDrag(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    
+    // Resume 3D interactions
+    if(api) api.start();
+    
+    // Check drop target
+    const clientX = e.type.includes('mouse') ? e.clientX : e.changedTouches[0].clientX;
+    const clientY = e.type.includes('mouse') ? e.clientY : e.changedTouches[0].clientY;
+    
+    const dropZone = document.elementFromPoint(clientX, clientY)?.closest('.dropzone');
+    
+    // Remove highlights
+    document.querySelectorAll('.dropzone').forEach(z => z.classList.remove('highlight'));
+    
+    if (dropZone) {
+        handleDrop(dropZone.dataset.id);
+    } else {
+        // Return to original position if dropped nowhere
+        resetPosition();
+    }
+}
+
+function checkHover(x, y) {
+    document.querySelectorAll('.dropzone').forEach(z => z.classList.remove('highlight'));
+    const el = document.elementFromPoint(x, y)?.closest('.dropzone');
+    if (el) el.classList.add('highlight');
+}
+
+function resetPosition() {
+    modelContainer.style.position = 'absolute';
+    modelContainer.style.left = '50%';
+    modelContainer.style.top = '25%';
+    modelContainer.style.transform = 'translateX(-50%)';
+    modelContainer.style.zIndex = 10;
+}
+
+function handleDrop(targetId) {
+    const popup = document.getElementById('popup');
+    popup.style.display = 'flex';
+    
+    if (targetId === correctTarget) {
+        document.getElementById('title').innerHTML = ' Tahniah!';
+        document.getElementById('message').innerHTML = 'Botol plastik perlu dikitar semula!';
+        document.getElementById('teacherReaction').innerHTML = '👏👩‍🏫';
+        document.getElementById('successSound').play();
+        document.getElementById('clapSound').play();
         
-        if (zone.dataset.id === scenario.correct) {
-            // Success
-            document.getElementById('popup').style.display = 'flex';
-            document.getElementById('title').innerHTML = '🎉 Bagus!';
-            document.getElementById('message').innerHTML = scenario.message;
-            document.getElementById('teacherReaction').innerHTML = '👏‍🏫👏';
-            
-            try { document.getElementById('successSound').play(); } catch(e){}
-            try { document.getElementById('clapSound').play(); } catch(e){}
-
-            setTimeout(() => {
-                alert('Scenario Seterusnya');
-                location.reload();
-            }, 3000);
-        } else {
-            // Wrong
-            document.getElementById('popup').style.display = 'flex';
-            document.getElementById('title').innerHTML = '🙂 Cuba Lagi';
-            document.getElementById('message').innerHTML = 'Mari cuba sekali lagi.';
-            document.getElementById('teacherReaction').innerHTML = '👩‍🏫';
-            
-            try { document.getElementById('wrongSound').play(); } catch(e){}
-
-            setTimeout(() => {
-                document.getElementById('popup').style.display = 'none';
-            }, 2000);
-        }
-    });
-});
+        setTimeout(() => { alert('Scenario Seterusnya'); location.reload(); }, 3000);
+    } else {
+        document.getElementById('title').innerHTML = '🙂 Cuba Lagi';
+        document.getElementById('message').innerHTML = 'Botol ini tidak sesuai di sini.';
+        document.getElementById('teacherReaction').innerHTML = '‍🏫';
+        document.getElementById('wrongSound').play();
+        
+        setTimeout(() => { 
+            popup.style.display = 'none'; 
+            resetPosition(); 
+        }, 2000);
+    }
+}
 </script>
-
 </body>
 </html>
