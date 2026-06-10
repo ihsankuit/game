@@ -5,37 +5,86 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Game Prasekolah - 3D Interactable</title>
 <style>
-    body { margin: 0; font-family: Arial, sans-serif; background: #dff5d8; overflow: hidden; }
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    body { margin: 0; font-family: 'Segoe UI', Arial, sans-serif; background: #dff5d8; overflow: hidden; height: 100vh; width: 100vw; }
     
-    #playground { width: 100vw; height: 100vh; position: relative; }
+    #playground { position: relative; width: 100%; height: 100%; }
 
-    /* 3D Model Container */
-    #model-container {
+    /* --- 3D MODEL CONTAINER --- */
+    #model-wrapper {
         position: absolute;
-        top: 25%; left: 50%;
-        width: 300px; height: 400px;
+        top: 20%; left: 50%;
+        width: 320px; height: 420px;
         transform: translateX(-50%);
         z-index: 10;
-        transition: transform 0.1s ease-out; /* Smooth movement when dragging */
+        transition: transform 0.1s ease-out;
     }
 
-    iframe { width: 100%; height: 100%; border: none; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-
-    .controls { position: absolute; top: 5%; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; gap: 10px; }
-    button { font-size: 20px; padding: 8px 16px; cursor: pointer; background: white; border: 2px solid #888; border-radius: 8px; }
-
-    .destinations { position: absolute; bottom: 80px; width: 100%; display: flex; justify-content: center; gap: 20px; }
-    .dropzone { 
-        width: 140px; height: 140px; background: white; border: 4px dashed #888; 
-        border-radius: 20px; display: flex; align-items: center; justify-content: center; 
-        flex-direction: column; font-size: 18px; transition: all 0.3s;
+    #sketchfab-frame {
+        width: 100%; height: 100%;
+        border: none; border-radius: 24px;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        pointer-events: auto; /* Allow 3D interaction by default */
     }
-    .dropzone.highlight { background: #e0ffe0; border-color: #4caf50; transform: scale(1.1); }
+
+    /* DRAG HANDLE - The key to separating interactions */
+    .drag-handle {
+        position: absolute;
+        top: -50px; left: 50%;
+        transform: translateX(-50%);
+        width: 60px; height: 60px;
+        background: white;
+        border: 3px solid #4caf50;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 28px; cursor: grab;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        z-index: 20;
+        touch-action: none;
+        transition: transform 0.2s, background 0.2s;
+    }
+    .drag-handle:hover { transform: translateX(-50%) scale(1.1); background: #e8f5e9; }
+    .drag-handle:active { cursor: grabbing; transform: translateX(-50%) scale(0.95); background: #c8e6c9; }
+
+    /* State when actively dragging */
+    #model-wrapper.dragging {
+        z-index: 9999 !important;
+        transition: none !important;
+        filter: drop-shadow(0 20px 40px rgba(0,0,0,0.3));
+    }
+    #model-wrapper.dragging #sketchfab-frame {
+        pointer-events: none; /* BLOCK 3D interaction during drag */
+        opacity: 0.85;
+    }
+
+    /* --- UI ELEMENTS --- */
+    .controls { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 30; }
+    button { font-size: 18px; padding: 10px 20px; cursor: pointer; background: white; border: 2px solid #888; border-radius: 10px; box-shadow: 0 3px 0 #666; }
+    button:active { transform: translateY(3px); box-shadow: none; }
+
+    .destinations { position: absolute; bottom: 60px; width: 100%; display: flex; justify-content: center; gap: 20px; padding: 0 20px; }
+    .dropzone {
+        width: 140px; height: 140px; background: white;
+        border: 4px dashed #aaa; border-radius: 20px;
+        display: flex; align-items: center; justify-content: center;
+        flex-direction: column; font-size: 16px; font-weight: bold; color: #555;
+        transition: all 0.3s ease;
+    }
+    .dropzone span { font-size: 40px; margin-bottom: 5px; }
+    .dropzone.highlight { background: #e8f5e9; border-color: #4caf50; border-style: solid; transform: scale(1.1); color: #2e7d32; }
 
     .teacher { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 70px; pointer-events: none; }
 
-    #popup { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.8); color: white; z-index: 999; justify-content: center; align-items: center; text-align: center; flex-direction: column; }
-    #popup h1 { font-size: 40px; } #popup p { font-size: 24px; max-width: 600px; padding: 0 20px; }
+    #popup {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.8); color: white;
+        z-index: 10000; justify-content: center; align-items: center;
+        text-align: center; flex-direction: column;
+    }
+    #popup h1 { font-size: 48px; margin: 0 0 10px; }
+    #popup p { font-size: 24px; max-width: 600px; padding: 0 20px; line-height: 1.5; }
+    #teacher-reaction { font-size: 100px; margin-top: 20px; animation: bounce 0.6s infinite alternate; }
+    @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-15px); } }
 </style>
 </head>
 <body>
@@ -45,109 +94,114 @@
         <button onclick="resetPosition()">🔄 Reset Posisi</button>
     </div>
 
-    <!-- SKETCHFAB 3D MODEL -->
-    <div id="model-container">
-        <iframe id="sketchfab-frame" 
-            src="https://sketchfab.com/models/731efe2635c9472c9c1e4fdb1f8fbd13/embed?autostart=1&ui_infos=0&ui_watermark_link=0&ui_watermark=0&ui_ar=0&ui_vr=0&ui_help=0&ui_settings=0&ui_annotations=0&ui_inspector=0" 
-            allow="autoplay; fullscreen; xr-spatial-tracking" 
+    <!-- 3D MODEL WITH DRAG HANDLE -->
+    <div id="model-wrapper">
+        <div class="drag-handle" title="Tarik untuk alihkan">✋</div>
+        <iframe id="sketchfab-frame"
+            src="https://sketchfab.com/models/731efe2635c9472c9c1e4fdb1f8fbd13/embed?autostart=1&ui_infos=0&ui_watermark_link=0&ui_watermark=0&ui_ar=0&ui_vr=0&ui_help=0&ui_settings=0&ui_annotations=0&ui_inspector=0&camera=0"
+            allow="autoplay; fullscreen; xr-spatial-tracking"
             xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share>
         </iframe>
     </div>
 
     <div class="destinations">
-        <div class="dropzone" data-id="tong"><span style="font-size:30px">🗑️</span><div>Tong Kitar Semula</div></div>
-        <div class="dropzone" data-id="meja"><span style="font-size:30px">🪑</span><div>Meja</div></div>
-        <div class="dropzone" data-id="beg"><span style="font-size:30px">🎒</span><div>Beg</div></div>
-        <div class="dropzone" data-id="mulut"><span style="font-size:30px"></span><div>Mulut</div></div>
+        <div class="dropzone" data-id="tong"><span>️</span>Tong Kitar Semula</div>
+        <div class="dropzone" data-id="meja"><span>🪑</span>Meja</div>
+        <div class="dropzone" data-id="beg"><span>🎒</span>Beg</div>
+        <div class="dropzone" data-id="mulut"><span>👄</span>Mulut</div>
     </div>
 
-    <div class="teacher">👩‍🏫</div>
+    <div class="teacher">👩‍</div>
 </div>
 
+<!-- POPUP FEEDBACK -->
 <div id="popup">
-    <h1 id="title"></h1>
-    <p id="message"></p>
-    <div id="teacherReaction" style="font-size:100px; margin-top:20px;"></div>
+    <h1 id="popup-title"></h1>
+    <p id="popup-message"></p>
+    <div id="teacher-reaction"></div>
 </div>
 
-<audio id="successSound" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg"></audio>
-<audio id="wrongSound" src="https://actions.google.com/sounds/v1/cartoon/clown_horn.ogg"></audio>
-<audio id="clapSound" src="https://actions.google.com/sounds/v1/crowds/battle_crowd_celebrate_stutter.ogg"></audio>
+<!-- AUDIO (Using reliable Google Sounds CDN) -->
+<audio id="snd-success" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg" preload="auto"></audio>
+<audio id="snd-wrong" src="https://actions.google.com/sounds/v1/cartoon/clown_horn.ogg" preload="auto"></audio>
+<audio id="snd-clap" src="https://actions.google.com/sounds/v1/crowds/battle_crowd_celebrate_stutter.ogg" preload="auto"></audio>
 
-<!-- Sketchfab Viewer API -->
+<!-- SKETCHFAB VIEWER API -->
 <script src="https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js"></script>
 
 <script>
+// ==========================================
+// CONFIGURATION
+// ==========================================
+const CORRECT_TARGET = 'tong';
+const SCENARIO_MSG = 'Bagus! Botol plastik perlu dimasukkan ke dalam tong kitar semula.';
+
+// ==========================================
+// STATE
+// ==========================================
 let api = null;
 let isDragging = false;
-let startX, startY, initialLeft, initialTop;
-const modelContainer = document.getElementById('model-container');
-const correctTarget = 'tong';
+let dragOffsetX = 0, dragOffsetY = 0;
+let originalPos = { top: '20%', left: '50%', transform: 'translateX(-50%)' };
 
-// Initialize Sketchfab API
+const wrapper = document.getElementById('model-wrapper');
+const handle = document.querySelector('.drag-handle');
 const iframe = document.getElementById('sketchfab-frame');
-api = new SketchfabViewerAPI(iframe);
 
+// ==========================================
+// INITIALIZE SKETCHFAB API
+// ==========================================
+api = new SketchfabViewerAPI(iframe);
 api.init({
-    success: function() {
-        console.log('3D Model Loaded');
-        // Disable default camera controls when we start dragging
-        api.addEventListener('mousedown', () => {
-            if(isDragging) api.stopCameraControl();
-        });
-    },
-    error: function(err) { console.error('Error loading model:', err); }
+    success: () => console.log('✅ 3D Model Ready'),
+    error: (err) => console.error('❌ Sketchfab Error:', err)
 });
 
-// --- DRAG LOGIC FOR 3D MODEL ---
-modelContainer.addEventListener('mousedown', startDrag);
-modelContainer.addEventListener('touchstart', startDrag, {passive: false});
+// ==========================================
+// DRAG LOGIC (Handle Only)
+// ==========================================
+handle.addEventListener('mousedown', startDrag);
+handle.addEventListener('touchstart', startDrag, { passive: false });
 
 function startDrag(e) {
-    // Prevent interaction with 3D orbit controls during drag
-    e.preventDefault(); 
+    e.preventDefault();
+    e.stopPropagation(); // Prevent 3D canvas from receiving this event
     isDragging = true;
-    
-    const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
-    
-    startX = clientX;
-    startY = clientY;
-    
-    const rect = modelContainer.getBoundingClientRect();
-    // Store current position relative to viewport
-    initialLeft = rect.left;
-    initialTop = rect.top;
-    
-    // Fix position absolutely during drag so it doesn't jump
-    modelContainer.style.position = 'fixed';
-    modelContainer.style.left = initialLeft + 'px';
-    modelContainer.style.top = initialTop + 'px';
-    modelContainer.style.transform = 'none';
-    modelContainer.style.zIndex = 1000;
-    
-    // Pause 3D interactions while dragging
-    if(api) api.pause();
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    // Calculate offset so model doesn't jump to cursor
+    const rect = wrapper.getBoundingClientRect();
+    dragOffsetX = clientX - rect.left;
+    dragOffsetY = clientY - rect.top;
+
+    // Switch to drag mode
+    wrapper.classList.add('dragging');
+    wrapper.style.position = 'fixed';
+    wrapper.style.top = (clientY - dragOffsetY) + 'px';
+    wrapper.style.left = (clientX - dragOffsetX) + 'px';
+    wrapper.style.transform = 'none';
+
+    // PAUSE 3D camera controls during drag
+    if (api) api.pause();
 }
 
-window.addEventListener('mousemove', drag);
-window.addEventListener('touchmove', drag, {passive: false});
+window.addEventListener('mousemove', onDrag);
+window.addEventListener('touchmove', onDrag, { passive: false });
 
-function drag(e) {
+function onDrag(e) {
     if (!isDragging) return;
     e.preventDefault();
-    
-    const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
-    
-    const dx = clientX - startX;
-    const dy = clientY - startY;
-    
-    modelContainer.style.left = (initialLeft + dx) + 'px';
-    modelContainer.style.top = (initialTop + dy) + 'px';
-    
-    // Highlight dropzones when hovering
-    checkHover(clientX, clientY);
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    wrapper.style.left = (clientX - dragOffsetX) + 'px';
+    wrapper.style.top = (clientY - dragOffsetY) + 'px';
+
+    // Real-time drop zone highlighting
+    highlightDropZone(clientX, clientY);
 }
 
 window.addEventListener('mouseup', endDrag);
@@ -156,64 +210,79 @@ window.addEventListener('touchend', endDrag);
 function endDrag(e) {
     if (!isDragging) return;
     isDragging = false;
-    
-    // Resume 3D interactions
-    if(api) api.start();
-    
-    // Check drop target
-    const clientX = e.type.includes('mouse') ? e.clientX : e.changedTouches[0].clientX;
-    const clientY = e.type.includes('mouse') ? e.clientY : e.changedTouches[0].clientY;
-    
-    const dropZone = document.elementFromPoint(clientX, clientY)?.closest('.dropzone');
-    
-    // Remove highlights
+
+    // RESUME 3D camera controls
+    if (api) api.start();
+
+    // Determine drop target
+    const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+    const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+
+    // Clear highlights
     document.querySelectorAll('.dropzone').forEach(z => z.classList.remove('highlight'));
-    
+
+    // Check what's under the finger/mouse
+    const elBelow = document.elementFromPoint(clientX, clientY);
+    const dropZone = elBelow?.closest('.dropzone');
+
     if (dropZone) {
-        handleDrop(dropZone.dataset.id);
+        evaluateDrop(dropZone.dataset.id);
     } else {
-        // Return to original position if dropped nowhere
         resetPosition();
     }
 }
 
-function checkHover(x, y) {
+function highlightDropZone(x, y) {
     document.querySelectorAll('.dropzone').forEach(z => z.classList.remove('highlight'));
     const el = document.elementFromPoint(x, y)?.closest('.dropzone');
     if (el) el.classList.add('highlight');
 }
 
-function resetPosition() {
-    modelContainer.style.position = 'absolute';
-    modelContainer.style.left = '50%';
-    modelContainer.style.top = '25%';
-    modelContainer.style.transform = 'translateX(-50%)';
-    modelContainer.style.zIndex = 10;
-}
-
-function handleDrop(targetId) {
+// ==========================================
+// GAME LOGIC
+// ==========================================
+function evaluateDrop(targetId) {
     const popup = document.getElementById('popup');
     popup.style.display = 'flex';
-    
-    if (targetId === correctTarget) {
-        document.getElementById('title').innerHTML = ' Tahniah!';
-        document.getElementById('message').innerHTML = 'Botol plastik perlu dikitar semula!';
-        document.getElementById('teacherReaction').innerHTML = '👏👩‍🏫';
-        document.getElementById('successSound').play();
-        document.getElementById('clapSound').play();
-        
-        setTimeout(() => { alert('Scenario Seterusnya'); location.reload(); }, 3000);
+
+    if (targetId === CORRECT_TARGET) {
+        document.getElementById('popup-title').textContent = '🎉 Tahniah!';
+        document.getElementById('popup-message').textContent = SCENARIO_MSG;
+        document.getElementById('teacher-reaction').textContent = '👏👩‍🏫';
+        playSound('snd-success');
+        playSound('snd-clap');
+
+        setTimeout(() => {
+            alert('Scenario Seterusnya!');
+            location.reload();
+        }, 3000);
     } else {
-        document.getElementById('title').innerHTML = '🙂 Cuba Lagi';
-        document.getElementById('message').innerHTML = 'Botol ini tidak sesuai di sini.';
-        document.getElementById('teacherReaction').innerHTML = '‍🏫';
-        document.getElementById('wrongSound').play();
-        
-        setTimeout(() => { 
-            popup.style.display = 'none'; 
-            resetPosition(); 
+        document.getElementById('popup-title').textContent = '🙂 Cuba Lagi';
+        document.getElementById('popup-message').textContent = 'Botol ini tidak sesuai di sini. Cuba tempat lain!';
+        document.getElementById('teacher-reaction').textContent = '👩‍🏫';
+        playSound('snd-wrong');
+
+        setTimeout(() => {
+            popup.style.display = 'none';
+            resetPosition();
         }, 2000);
     }
+}
+
+function resetPosition() {
+    wrapper.classList.remove('dragging');
+    wrapper.style.position = 'absolute';
+    wrapper.style.top = originalPos.top;
+    wrapper.style.left = originalPos.left;
+    wrapper.style.transform = originalPos.transform;
+}
+
+function playSound(id) {
+    try {
+        const audio = document.getElementById(id);
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+    } catch(e) {}
 }
 </script>
 </body>
