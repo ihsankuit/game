@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Game Prasekolah - 3D Interactable</title>
+<title>Game Prasekolah - Transparent 3D</title>
 <style>
     * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
     body { margin: 0; font-family: 'Segoe UI', Arial, sans-serif; background: #dff5d8; overflow: hidden; height: 100vh; width: 100vw; }
@@ -23,11 +23,13 @@
     #sketchfab-frame {
         width: 100%; height: 100%;
         border: none; border-radius: 24px;
-        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-        pointer-events: auto; /* Allow 3D interaction by default */
+        /* Removed box-shadow for cleaner transparent look, or keep if desired */
+        /* box-shadow: 0 15px 40px rgba(0,0,0,0.15); */ 
+        pointer-events: auto;
+        background: transparent !important; /* Force transparency on iframe element */
     }
 
-    /* DRAG HANDLE - The key to separating interactions */
+    /* DRAG HANDLE */
     .drag-handle {
         position: absolute;
         top: -50px; left: 50%;
@@ -50,11 +52,11 @@
     #model-wrapper.dragging {
         z-index: 9999 !important;
         transition: none !important;
-        filter: drop-shadow(0 20px 40px rgba(0,0,0,0.3));
+        filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2)); /* Shadow moves with object now */
     }
     #model-wrapper.dragging #sketchfab-frame {
-        pointer-events: none; /* BLOCK 3D interaction during drag */
-        opacity: 0.85;
+        pointer-events: none;
+        opacity: 0.9;
     }
 
     /* --- UI ELEMENTS --- */
@@ -94,11 +96,11 @@
         <button onclick="resetPosition()">🔄 Reset Posisi</button>
     </div>
 
-    <!-- 3D MODEL WITH DRAG HANDLE -->
+    <!-- 3D MODEL WITH TRANSPARENT BACKGROUND -->
     <div id="model-wrapper">
-        <div class="drag-handle" title="Tarik untuk alihkan">✋</div>
+        <div class="drag-handle" title="Tarik untuk alihkan"></div>
         <iframe id="sketchfab-frame"
-            src="https://sketchfab.com/models/731efe2635c9472c9c1e4fdb1f8fbd13/embed?autostart=1&ui_infos=0&ui_watermark_link=0&ui_watermark=0&ui_ar=0&ui_vr=0&ui_help=0&ui_settings=0&ui_annotations=0&ui_inspector=0&camera=0"
+            src="https://sketchfab.com/models/731efe2635c9472c9c1e4fdb1f8fbd13/embed?autostart=1&ui_infos=0&ui_watermark_link=0&ui_watermark=0&ui_ar=0&ui_vr=0&ui_help=0&ui_settings=0&ui_annotations=0&ui_inspector=0&camera=0&transparent=1&bg_color=00000000"
             allow="autoplay; fullscreen; xr-spatial-tracking"
             xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share>
         </iframe>
@@ -107,7 +109,7 @@
     <div class="destinations">
         <div class="dropzone" data-id="tong"><span>️</span>Tong Kitar Semula</div>
         <div class="dropzone" data-id="meja"><span>🪑</span>Meja</div>
-        <div class="dropzone" data-id="beg"><span>🎒</span>Beg</div>
+        <div class="dropzone" data-id="beg"><span></span>Beg</div>
         <div class="dropzone" data-id="mulut"><span>👄</span>Mulut</div>
     </div>
 
@@ -121,24 +123,16 @@
     <div id="teacher-reaction"></div>
 </div>
 
-<!-- AUDIO (Using reliable Google Sounds CDN) -->
 <audio id="snd-success" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg" preload="auto"></audio>
 <audio id="snd-wrong" src="https://actions.google.com/sounds/v1/cartoon/clown_horn.ogg" preload="auto"></audio>
 <audio id="snd-clap" src="https://actions.google.com/sounds/v1/crowds/battle_crowd_celebrate_stutter.ogg" preload="auto"></audio>
 
-<!-- SKETCHFAB VIEWER API -->
 <script src="https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js"></script>
 
 <script>
-// ==========================================
-// CONFIGURATION
-// ==========================================
 const CORRECT_TARGET = 'tong';
 const SCENARIO_MSG = 'Bagus! Botol plastik perlu dimasukkan ke dalam tong kitar semula.';
 
-// ==========================================
-// STATE
-// ==========================================
 let api = null;
 let isDragging = false;
 let dragOffsetX = 0, dragOffsetY = 0;
@@ -148,42 +142,33 @@ const wrapper = document.getElementById('model-wrapper');
 const handle = document.querySelector('.drag-handle');
 const iframe = document.getElementById('sketchfab-frame');
 
-// ==========================================
-// INITIALIZE SKETCHFAB API
-// ==========================================
 api = new SketchfabViewerAPI(iframe);
 api.init({
     success: () => console.log('✅ 3D Model Ready'),
     error: (err) => console.error('❌ Sketchfab Error:', err)
 });
 
-// ==========================================
-// DRAG LOGIC (Handle Only)
-// ==========================================
 handle.addEventListener('mousedown', startDrag);
 handle.addEventListener('touchstart', startDrag, { passive: false });
 
 function startDrag(e) {
     e.preventDefault();
-    e.stopPropagation(); // Prevent 3D canvas from receiving this event
+    e.stopPropagation();
     isDragging = true;
 
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-    // Calculate offset so model doesn't jump to cursor
     const rect = wrapper.getBoundingClientRect();
     dragOffsetX = clientX - rect.left;
     dragOffsetY = clientY - rect.top;
 
-    // Switch to drag mode
     wrapper.classList.add('dragging');
     wrapper.style.position = 'fixed';
     wrapper.style.top = (clientY - dragOffsetY) + 'px';
     wrapper.style.left = (clientX - dragOffsetX) + 'px';
     wrapper.style.transform = 'none';
 
-    // PAUSE 3D camera controls during drag
     if (api) api.pause();
 }
 
@@ -200,7 +185,6 @@ function onDrag(e) {
     wrapper.style.left = (clientX - dragOffsetX) + 'px';
     wrapper.style.top = (clientY - dragOffsetY) + 'px';
 
-    // Real-time drop zone highlighting
     highlightDropZone(clientX, clientY);
 }
 
@@ -211,17 +195,13 @@ function endDrag(e) {
     if (!isDragging) return;
     isDragging = false;
 
-    // RESUME 3D camera controls
     if (api) api.start();
 
-    // Determine drop target
     const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
     const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
 
-    // Clear highlights
     document.querySelectorAll('.dropzone').forEach(z => z.classList.remove('highlight'));
 
-    // Check what's under the finger/mouse
     const elBelow = document.elementFromPoint(clientX, clientY);
     const dropZone = elBelow?.closest('.dropzone');
 
@@ -238,9 +218,6 @@ function highlightDropZone(x, y) {
     if (el) el.classList.add('highlight');
 }
 
-// ==========================================
-// GAME LOGIC
-// ==========================================
 function evaluateDrop(targetId) {
     const popup = document.getElementById('popup');
     popup.style.display = 'flex';
@@ -248,7 +225,7 @@ function evaluateDrop(targetId) {
     if (targetId === CORRECT_TARGET) {
         document.getElementById('popup-title').textContent = '🎉 Tahniah!';
         document.getElementById('popup-message').textContent = SCENARIO_MSG;
-        document.getElementById('teacher-reaction').textContent = '👏👩‍🏫';
+        document.getElementById('teacher-reaction').textContent = '👩‍🏫';
         playSound('snd-success');
         playSound('snd-clap');
 
@@ -259,7 +236,7 @@ function evaluateDrop(targetId) {
     } else {
         document.getElementById('popup-title').textContent = '🙂 Cuba Lagi';
         document.getElementById('popup-message').textContent = 'Botol ini tidak sesuai di sini. Cuba tempat lain!';
-        document.getElementById('teacher-reaction').textContent = '👩‍🏫';
+        document.getElementById('teacher-reaction').textContent = '👩‍';
         playSound('snd-wrong');
 
         setTimeout(() => {
